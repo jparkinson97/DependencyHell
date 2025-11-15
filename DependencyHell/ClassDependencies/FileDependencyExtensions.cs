@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using DependencyHell.General;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection;
@@ -61,6 +62,21 @@ namespace DependencyHell.ClassDependencies
         public static AssemblyName[] GetReferencedAssemblies(Assembly assembly)
         {
             return assembly.GetReferencedAssemblies();
+        }
+
+        public static AssemblyNode ToAssemblyNode(this Assembly assembly)
+        {
+            AssemblyNode assemblyNode = new(assembly);
+
+            List<TypeNode> typeNodes = [];
+            foreach (var  type in assembly.GetTypes())
+            {
+                typeNodes.Add(new(assemblyNode, type));
+            }
+
+            assemblyNode.AddTypes(typeNodes);
+
+            return assemblyNode;
         }
 
         public static Type[] GetClasses(Assembly assembly)
