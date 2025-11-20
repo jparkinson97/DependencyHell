@@ -1,9 +1,5 @@
 ﻿using DependencyHell.General;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace DependencyHell.ClassDependencies
@@ -45,8 +41,7 @@ namespace DependencyHell.ClassDependencies
         public static IEnumerable<Type> GetReferencedTypes(Assembly assembly)
         {
             List<Type> referencedTypes = [];
-            var types = GetClasses(assembly);
-            foreach (Type type in types)
+            foreach (Type type in GetClasses(assembly))
             {
                 referencedTypes.AddRange(GetReferencedTypes(type));
             }
@@ -54,14 +49,15 @@ namespace DependencyHell.ClassDependencies
             return referencedTypes;
         }
 
-        public static Assembly GetAssembly(AssemblyName assemblyName)
+        public static List<Assembly> GetReferencedAssemblies(Assembly assembly)
         {
-            return Assembly.Load(assemblyName);
-        }
+            List<Assembly> referencedAssemblies = [];
+            foreach (var assemblyName in assembly.GetReferencedAssemblies())
+            {
+                referencedAssemblies.Add(Assembly.Load(assemblyName));
+            }
 
-        public static AssemblyName[] GetReferencedAssemblies(Assembly assembly)
-        {
-            return assembly.GetReferencedAssemblies();
+            return referencedAssemblies;
         }
 
         public static AssemblyNode ToAssemblyNode(this Assembly assembly)
@@ -69,19 +65,21 @@ namespace DependencyHell.ClassDependencies
             AssemblyNode assemblyNode = new(assembly);
 
             List<TypeNode> typeNodes = [];
-            foreach (var  type in assembly.GetTypes())
+            foreach (var type in assembly.GetTypes())
             {
                 typeNodes.Add(new(assemblyNode, type));
             }
 
-            assemblyNode.AddTypes(typeNodes);
+            assemblyNode.AddMemberTypes(typeNodes);
 
             return assemblyNode;
         }
 
         public static Type[] GetClasses(Assembly assembly)
         {
-            return [.. assembly.GetTypes().Where(type => type.IsClass)];
+
+            var types = assembly.GetTypes();
+            return types.ToArray();
         }
 
         public static IEnumerable<Type> GetReferencedTypes(Type type)
@@ -91,72 +89,68 @@ namespace DependencyHell.ClassDependencies
                 throw new ArgumentNullException(nameof(type));
             }
 
-            var referencedTypes = new HashSet<Type>();
+            var finalReferencedTypes = new HashSet<Type>();
 
-            if (type.BaseType != null)
-            {
-                referencedTypes.Add(type.BaseType);
-            }
-
-            foreach (var implementedInterface in type.GetInterfaces())
-            {
-                referencedTypes.Add(implementedInterface);
-            }
-
-            foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-            {
-                referencedTypes.Add(field.FieldType);
-            }
-
-            foreach (var prop in type.GetProperties(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
-            {
-                referencedTypes.Add(prop.PropertyType);
-            }
-
+            var directReferences = new HashSet<Type>();
+            if (type.BaseType != null) directReferences.Add(type.BaseType);
+            foreach (var i in type.GetInterfaces()) directReferences.Add(i);
+            foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)) directReferences.Add(field.FieldType);
+            foreach (var prop in type.GetProperties(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)) directReferences.Add(prop.PropertyType);
             foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
             {
-                referencedTypes.Add(method.ReturnType);
+                directReferences.Add(method.ReturnType);
+                foreach (var param in method.GetParameters()) directReferences.Add(param.ParameterType);
+            }
+            foreach (var attribute in type.GetCustomAttributes(false)) directReferences.Add(attribute.GetType());
 
-                foreach (var param in method.GetParameters())
+            foreach (var refType in directReferences)
+            {
+                foreach (var definitionType in GetUnderlyingTypeDefinitions(refType))
                 {
-                    referencedTypes.Add(param.ParameterType);
+                    finalReferencedTypes.Add(definitionType);
                 }
             }
 
-            foreach (var attribute in type.GetCustomAttributes(false))
-            {
-                referencedTypes.Add(attribute.GetType());
-            }
+            finalReferencedTypes.Remove(type);
 
-            var typesToInspectForGenerics = new Queue<Type>(referencedTypes);
-            while (typesToInspectForGenerics.Count > 0)
+            return finalReferencedTypes;
+        }
+
+        private static IEnumerable<Type> GetUnderlyingTypeDefinitions(Type type)
+        {
+            var queue = new Queue<Type>();
+            queue.Enqueue(type);
+
+            while (queue.Count > 0)
             {
-                var currentType = typesToInspectForGenerics.Dequeue();
+                Type currentType = queue.Dequeue();
+                if (currentType == null) continue;
+
+                if (currentType.HasElementType)
+                {
+                    queue.Enqueue(currentType.GetElementType());
+                    continue;
+                }
 
                 if (currentType.IsGenericType)
                 {
+                    yield return currentType.GetGenericTypeDefinition();
+
                     foreach (var genericArg in currentType.GetGenericArguments())
                     {
-                        if (referencedTypes.Add(genericArg))
+                        if (!genericArg.IsGenericParameter) // Filter out placeholder types like 'T'
                         {
-                            typesToInspectForGenerics.Enqueue(genericArg);
+                            queue.Enqueue(genericArg);
                         }
                     }
+                    continue;
                 }
 
-                if (currentType.IsArray)
+                if (!currentType.IsGenericParameter)
                 {
-                    var elementType = currentType.GetElementType();
-                    if (referencedTypes.Add(elementType))
-                    {
-                        typesToInspectForGenerics.Enqueue(elementType);
-                    }
+                    yield return currentType;
                 }
             }
-
-            referencedTypes.Remove(type);
-
-            return referencedTypes;
         }
     }
 }

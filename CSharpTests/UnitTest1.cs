@@ -1,4 +1,5 @@
 using DependencyHell.ClassDependencies;
+using DependencyHell.General;
 using System.Reflection;
 
 namespace CSharpTests
@@ -22,9 +23,14 @@ namespace CSharpTests
         }
 
         [Fact]
-        public void GrabClassesInAssembly(Assembly assembly)
+        public void BuildDependencyTree()
         {
+            Assembly currentAssembly = Assembly.GetExecutingAssembly();
 
+            var referencedAssemblies = FileDependencyExtensions.GetReferencedAssemblies(currentAssembly);
+
+            var dependencyTree = DependencyTreeBuilder.BuildDependencyTree(referencedAssemblies);
+            var test = "";
         }
 
         [Fact]

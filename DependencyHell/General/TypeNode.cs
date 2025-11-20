@@ -5,7 +5,7 @@ namespace DependencyHell.General
     {
         private readonly AssemblyNode _assemblyNode;
         public Type Type {  get; }
-        private List<TypeNode> dependents;
+        private List<TypeNode> dependents = [];
 
         public TypeNode(AssemblyNode assemblyNode, Type type)
         {
@@ -29,7 +29,9 @@ namespace DependencyHell.General
 
         public void AddDependent(TypeNode typeNode)
         {
+            
             dependents.Add(typeNode);
+            
         }
     }
 }

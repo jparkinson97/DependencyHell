@@ -5,35 +5,52 @@ namespace DependencyHell.General
     public class AssemblyNode
     {
         private readonly Assembly _assembly;
-        private readonly List<TypeNode> _types;
+        private readonly Dictionary<string, TypeNode> _memberTypes = [];
+
 
         public AssemblyNode(Assembly assembly)
         {
             _assembly = assembly;
         }
 
-        public void AddTypes(List<TypeNode> types)
+        public void AddMemberTypes(List<TypeNode> types)
         {
-            _types.AddRange(types);
+            foreach (var type in types)
+            {
+                if (type != null)
+                {
+                    _memberTypes[type.Type.FullName!] = type;
+                }
+            }
         }
 
-        public string GetAssemblyName()
+        public TypeNode GetTypeNode(string typeFullName)
+        {
+            return _memberTypes[typeFullName];
+        }
+
+        public string GetAssemblyFullName()
         {
             return _assembly.FullName!;
+        }
+
+        public List<TypeNode> GetMemberTypes()
+        {
+            return _memberTypes.Values.ToList();
         }
 
         public List<string> GetDependentAssemblies()
         {
             List<string> dependentAssemblies = [];
-            foreach (var type in _types)
+            foreach (var type in _memberTypes)
             {
-                foreach (var dependentType in type.GetDependents())
+                foreach (var dependentType in type.Value.GetDependents())
                 {
                     dependentAssemblies
                         .Add(
                             dependentType
                             .GetAssembly()
-                            .GetAssemblyName()
+                            .GetAssemblyFullName()
                             );
                 }
             }
