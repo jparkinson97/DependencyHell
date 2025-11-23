@@ -1,5 +1,6 @@
 ﻿
 using DependencyHell.General;
+using System;
 
 namespace DependencyHell.ClassDependencies
 {

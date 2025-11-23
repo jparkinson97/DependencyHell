@@ -1,4 +1,6 @@
 ﻿
+using System.Collections.Generic;
+
 namespace DependencyHell.General
 {
     public interface INode

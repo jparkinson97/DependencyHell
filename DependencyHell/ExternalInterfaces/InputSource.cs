@@ -1,18 +1,20 @@
-﻿using DependencyHell.General;
+﻿
+using DependencyHell.ExternalInterfaces.DTOs;
+using System;
 
 namespace DependencyHell.ExternalInterfaces
 {
     public class InputSource // Extend this class to send changes
     {
-        private TypeUpdateTracker _updateTracker;
-        public InputSource(TypeUpdateTracker updateTracker)
+        private readonly Action<TypeDTO> _addUpdatedType;
+        public InputSource(Action<TypeDTO> addUpdatedType)
         {
-            _updateTracker = updateTracker;
+            _addUpdatedType = addUpdatedType;
         }
 
-        public void Add(TypeNode type)
+        public void Add(TypeDTO type)
         {
-            _updateTracker.AddTypeUpdate(type);
+            _addUpdatedType(type);
         }
     }
 }

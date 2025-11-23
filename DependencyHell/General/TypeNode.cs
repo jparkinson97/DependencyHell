@@ -1,4 +1,7 @@
 ﻿
+using System;
+using System.Collections.Generic;
+
 namespace DependencyHell.General
 {
     public class TypeNode
@@ -13,9 +16,9 @@ namespace DependencyHell.General
             Type = type;
         }
 
-        public AssemblyNode GetAssembly()
+        public string GetAssemblyFullName()
         {
-            return _assemblyNode;
+            return _assemblyNode.GetAssemblyFullName();
         }
         public List<TypeNode> GetDependents()
         {

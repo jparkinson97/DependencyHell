@@ -1,43 +1,14 @@
-﻿using DependencyHell.General;
+﻿using DependencyHell.ExternalInterfaces;
+using DependencyHell.General;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 
 namespace DependencyHell.ClassDependencies
 {
     public static class FileDependencyExtensions
     {
-        public static List<PackageReference> GetPackagereferences(string csproj)
-        {
-            string regexPattern = @"<(PackageReference|ProjectReference)\s+Include=""(?<name>[^""]+)""(?:.*?\s+Version=""(?<version>[^""]+)"")?.*?\/>";
-            var regex = new Regex(regexPattern);
-            var matches = regex.Matches(csproj);
-
-            List<PackageReference> result = [];
-
-            foreach (Match package in matches)
-            {
-                char[] charsToTrim = { '{', ' ', '<', '>', '}' };
-                var value = package.Value.Trim(charsToTrim);
-                var packageString = value;
-                var versionString = string.Empty;
-                var versionValue = string.Empty;
-
-                if (value.Contains("Version"))
-                {
-                    var split = value.Split("Version");
-                    packageString = split[0];
-                    versionString = split[1];
-
-                    versionValue = versionString.Split('=')[1].Trim('\"');
-                }
-                var packageValue = packageString.Split('=')[1].Trim('\"');
-
-                result.Add(new(packageValue, versionValue));
-            }
-
-            return result;
-        }
-
         public static IEnumerable<Type> GetReferencedTypes(Assembly assembly)
         {
             List<Type> referencedTypes = [];
@@ -60,7 +31,7 @@ namespace DependencyHell.ClassDependencies
             return referencedAssemblies;
         }
 
-        public static AssemblyNode ToAssemblyNode(this Assembly assembly)
+        public static AssemblyNode ToAssemblyNode(this Assembly assembly, List<ITypeFilter> filters)
         {
             AssemblyNode assemblyNode = new(assembly);
 
@@ -69,8 +40,7 @@ namespace DependencyHell.ClassDependencies
             {
                 typeNodes.Add(new(assemblyNode, type));
             }
-
-            assemblyNode.AddMemberTypes(typeNodes);
+            assemblyNode.AddMemberTypes(typeNodes.ApplyFilters(filters));
 
             return assemblyNode;
         }

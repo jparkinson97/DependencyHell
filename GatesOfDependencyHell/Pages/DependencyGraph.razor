@@ -1,0 +1,77 @@
+﻿@page "/"
+@using System.Text.Json
+@using DependencyHell.Core
+@using DependencyHell.ExternalInterfaces.DTOs;
+@using DependencyHell.General
+@inject IJSRuntime JSRuntime
+
+<div id="cy" style="width: 100%; height: 90vh; border: 1px solid #ccc;"></div>
+
+@code {
+    List<AssemblyNode> myAssemblies = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            LoadData();
+
+            var graphElements = ConvertToGraphElements(myAssemblies);
+
+            await JSRuntime.InvokeVoidAsync("initializeGraph", graphElements);
+        }
+    }
+
+    private List<GraphElement> ConvertToGraphElements(List<AssemblyNode> nodes)
+    {
+        var elements = new List<GraphElement>();
+
+        foreach (var asm in nodes)
+        {
+            string asmId = asm.GetAssemblyFullName();
+
+            elements.Add(new GraphElement
+            {
+                data = new GraphData { id = asmId, label = asmId, type = "assembly" }
+            });
+
+            foreach (var typeNode in asm.GetMemberTypes())
+            {
+                string typeId = typeNode.Type.FullName ?? "Unknown";
+
+                elements.Add(new GraphElement
+                {
+                    data = new GraphData { id = typeId, label = typeNode.Type.Name, parent = asmId, type = "type" }
+                });
+
+                // Add Edges
+                foreach (var dep in typeNode.GetDependents())
+                {
+                    elements.Add(new GraphElement
+                    {
+                        data = new GraphData
+                        {
+                            id = Guid.NewGuid().ToString(),
+                            source = dep.Type.FullName, // Who depends on me?
+                            target = typeId,            // Me
+                            type = "edge"
+                        }
+                    });
+                }
+            }
+        }
+        return elements;
+    }
+
+    private void LoadData()
+    {
+        Assembly currentAssembly = Assembly.GetExecutingAssembly();
+
+        var referencedAssemblies = FileDependencyExtensions.GetReferencedAssemblies(currentAssembly);
+
+        var dependencyTree = DependencyTreeBuilder.BuildDependencyTree(referencedAssemblies, []);
+
+        var assemblies = dependencyTree.Values.ToList();
+        myAssemblies = assemblies;
+    }
+}

@@ -1,4 +1,7 @@
 ﻿
+using System;
+using System.Collections.Generic;
+
 namespace DependencyHell.General
 {
     public class TypeUpdateTracker : IObservable<TypeNode>
@@ -39,7 +42,6 @@ namespace DependencyHell.General
         {
             foreach (var observer in observers)
             {
-
                 observer.OnNext(typeNode);
             }
         }

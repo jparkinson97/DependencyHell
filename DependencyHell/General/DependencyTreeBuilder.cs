@@ -1,17 +1,19 @@
 ﻿using DependencyHell.ClassDependencies;
+using DependencyHell.ExternalInterfaces;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace DependencyHell.General
 {
     public static class DependencyTreeBuilder
     {
-        public static Dictionary<string, AssemblyNode> BuildDependencyTree(List<Assembly> assemblies)
+        public static Dictionary<string, AssemblyNode> BuildDependencyTree(List<Assembly> assemblies, List<ITypeFilter> typeFilters)
         {
             Dictionary<string, AssemblyNode> assemblyNodes = [];
 
             foreach (var assembly in assemblies)
             {
-                assemblyNodes[assembly.FullName!] = assembly.ToAssemblyNode();
+                assemblyNodes[assembly.FullName!] = assembly.ToAssemblyNode(typeFilters);
             }
 
             // Need to build the data structure first. Might be possible to do all in one shot but id give up a few ms runtime for clarity.

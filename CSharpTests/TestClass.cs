@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DependencyHell.ExternalInterfaces;
+using DependencyHell.General;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,5 +12,13 @@ namespace CSharpTests
     internal class TestClass
     {
         JsonArray test = new JsonArray();
+    }
+
+    public class TotalFilter : ITypeFilter
+    {
+        public bool Filter(TypeNode type)
+        {
+            return false;
+        }
     }
 }

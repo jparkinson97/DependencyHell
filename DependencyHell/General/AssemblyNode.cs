@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace DependencyHell.General
 {
@@ -6,11 +8,12 @@ namespace DependencyHell.General
     {
         private readonly Assembly _assembly;
         private readonly Dictionary<string, TypeNode> _memberTypes = [];
-
+        public readonly string Version;
 
         public AssemblyNode(Assembly assembly)
         {
             _assembly = assembly;
+            Version = assembly.GetName().Version!.ToString(); // what do I reference here?
         }
 
         public void AddMemberTypes(List<TypeNode> types)
@@ -49,7 +52,6 @@ namespace DependencyHell.General
                     dependentAssemblies
                         .Add(
                             dependentType
-                            .GetAssembly()
                             .GetAssemblyFullName()
                             );
                 }
